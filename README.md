@@ -28,7 +28,8 @@ This project must be served via a local web server.
 Example:
 
 ```bash
-python3 -m http.server```
+python3 -m http.server
+```
 
 Then open:
 http://localhost:8000
