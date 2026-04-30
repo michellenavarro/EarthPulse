@@ -1,13 +1,8 @@
-// ================================
-// 🌍 EarthPulse - Stable Cesium MVP
-// ================================
-
-// IMPORTANT: no Ion token needed for this MVP
 Cesium.Ion.defaultAccessToken = undefined;
 
-// -------------------------------
-// Viewer setup (stable config)
-// -------------------------------
+// ================================
+// 🌍 Viewer
+// ================================
 const viewer = new Cesium.Viewer("cesiumContainer", {
   imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
   baseLayerPicker: false,
@@ -18,87 +13,163 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
   geocoder: false,
 });
 
-// Camera starting position
 viewer.camera.setView({
   destination: Cesium.Cartesian3.fromDegrees(0, 20, 20000000),
 });
 
-// Atmosphere (nice visual touch)
 viewer.scene.skyAtmosphere.show = true;
 
-// UI panel
 const infoPanel = document.getElementById("infoPanel");
 
-// -------------------------------
-// Color function (optional placeholder)
-// -------------------------------
-function getColor(value) {
-  if (value < 2000) return Cesium.Color.GREEN.withAlpha(0.4);
-  if (value < 8000) return Cesium.Color.ORANGE.withAlpha(0.4);
-  return Cesium.Color.RED.withAlpha(0.5);
+// ================================
+// 🌍 DATA
+// ================================
+let co2ByISO = {};
+let nameToISO = {};
+let normalizedNameToISO = {};
+
+// ================================
+// 🧠 normalize helper (CRITICAL FIX)
+// ================================
+function normalize(name) {
+  return (name || "")
+    .toLowerCase()
+    .replace(/\(.*?\)/g, "")
+    .replace(/-/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-// -------------------------------
-// Country GeoJSON source
-// -------------------------------
-const url =
+// ================================
+// 🌍 LOAD DATA
+// ================================
+async function loadCO2() {
+  co2ByISO = await fetch("./data/co2.json").then(r => r.json());
+  console.log("CO₂ loaded:", Object.keys(co2ByISO).length);
+}
+
+async function loadCountries() {
+  nameToISO = await fetch("./data/country-name-to-iso.json").then(r => r.json());
+
+  // build normalized lookup table
+  for (const [name, iso] of Object.entries(nameToISO)) {
+    normalizedNameToISO[normalize(name)] = iso;
+  }
+
+  console.log("Countries loaded:", Object.keys(nameToISO).length);
+}
+
+// ================================
+// 🎨 Color scale (UNCHANGED)
+// ================================
+function getColor(co2Obj) {
+  const co2 = co2Obj?.co2;
+
+  if (co2 == null) return Cesium.Color.GRAY.withAlpha(0.25);
+
+  const v = Math.log10(co2 + 1);
+
+  if (v < 1.2) return Cesium.Color.GREEN.withAlpha(0.35);
+  if (v < 2.2) return Cesium.Color.YELLOW.withAlpha(0.4);
+  if (v < 3.0) return Cesium.Color.ORANGE.withAlpha(0.45);
+  return Cesium.Color.RED.withAlpha(0.55);
+}
+
+// ================================
+// 🌍 GeoJSON
+// ================================
+const GEOJSON_URL =
   "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson";
 
-// -------------------------------
-// Load countries safely
-// -------------------------------
-Cesium.GeoJsonDataSource.load(url, {
-  clampToGround: false, // important: avoids terrain/geometry edge issues
-})
-  .then((dataSource) => {
-    viewer.dataSources.add(dataSource);
+// ================================
+// 🧠 Extract name (your original logic kept)
+// ================================
+function getCountryName(entity) {
+  const p = entity.properties;
 
-    const entities = dataSource.entities.values;
+  return (
+    p?.ADMIN?.getValue?.() ||
+    p?.NAME?.getValue?.() ||
+    p?.name?.getValue?.() ||
+    null
+  );
+}
 
-    for (let i = 0; i < entities.length; i++) {
-      const entity = entities[i];
+// ================================
+// 🔗 resolve ISO (NEW FIXED LAYER)
+// ================================
+function resolveISO(name) {
+  if (!name) return null;
 
-      if (!entity.polygon) continue;
+  // try exact match first
+  if (nameToISO[name]) return nameToISO[name];
 
-      // ================================
-      // SAFE STYLING (NO OUTLINES)
-      // ================================
-      entity.polygon.material = Cesium.Color.DARKSLATEGRAY.withAlpha(0.35);
+  // fallback normalized match (THIS FIXES EVERYTHING)
+  const norm = normalize(name);
+  return normalizedNameToISO[norm] || null;
+}
 
-      entity.polygon.outline = false;
+// ================================
+// 🌍 Load world
+// ================================
+async function loadWorld() {
+  await loadCO2();
+  await loadCountries();
 
-      // ensure correct classification behavior (optional but stable)
-      entity.polygon.classificationType =
-        Cesium.ClassificationType.TERRAIN;
+  const dataSource = await Cesium.GeoJsonDataSource.load(GEOJSON_URL);
+
+  viewer.dataSources.add(dataSource);
+
+  const entities = dataSource.entities.values;
+
+  let matched = 0;
+
+  for (let i = 0; i < entities.length; i++) {
+    const entity = entities[i];
+
+    if (!entity.polygon) continue;
+
+    const name = getCountryName(entity);
+    const iso = resolveISO(name);
+    const co2 = iso ? co2ByISO[iso] : null;
+
+    if (co2?.co2 != null) matched++;
+
+    entity.polygon.material = getColor(co2);
+    entity.polygon.outline = false;
+
+    if (i < 5) {
+      console.log("DEBUG:", name, "→", iso, "→", co2);
     }
+  }
 
-    // zoom to world
-    viewer.zoomTo(dataSource);
-  })
-  .catch((err) => {
-    console.error("GeoJSON load failed:", err);
-  });
+  console.log("Matched countries:", matched);
 
-// -------------------------------
-// Click interaction (safe picking)
-// -------------------------------
+  viewer.zoomTo(dataSource);
+}
+
+// ================================
+// 🖱 Click
+// ================================
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
 handler.setInputAction((movement) => {
   const picked = viewer.scene.pick(movement.position);
 
-  if (Cesium.defined(picked) && picked.id && picked.id.properties) {
-    const props = picked.id.properties;
+  if (!Cesium.defined(picked) || !picked.id?.properties) return;
 
-    const name =
-      props.NAME_EN?.getValue?.() ||
-      props.name?.getValue?.() ||
-      "Unknown Country";
+  const name = getCountryName(picked.id);
+  const iso = resolveISO(name);
+  const co2 = iso ? co2ByISO[iso] : null;
 
-    infoPanel.innerHTML = `
-      <b>${name}</b><br/>
-      CO₂: (not yet connected)<br/>
-      Status: geometry loaded ✔
-    `;
-  }
+  infoPanel.innerHTML = `
+    <b>${name || "Unknown"}</b><br/>
+    ISO: ${iso || "N/A"}<br/>
+    CO₂: ${co2 ? co2.co2.toFixed(2) + " Mt" : "No data"}
+  `;
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+// ================================
+// 🚀 Boot
+// ================================
+loadWorld().catch(console.error);
