@@ -1,26 +1,32 @@
 # EarthPulse
 
-EarthPulse is a lightweight 3D climate visualization tool built with CesiumJS.
-
-It displays global CO₂ emissions data on an interactive globe.
+EarthPulse is a lightweight 3D climate visualization tool built with CesiumJS.  
+It presents global CO₂ emissions data on an interactive globe, using the most recent available dataset for each country.
 
 ## Features
 
-- 3D interactive Earth
-- Country-level CO₂ visualization
-- Clickable country data panels
-- Simple emissions-based color scaling
+- Interactive 3D globe powered by CesiumJS
+- Country-level CO₂ emissions visualization
+- Color-coded emission intensity (low, medium, high)
+- Uses latest available emissions data per country
+
+## Data Source
+
+CO₂ emissions data is sourced from Our World in Data:  
+https://github.com/owid/co2-data
 
 ## Tech Stack
 
 - CesiumJS
 - Vanilla JavaScript
-- Static GeoJSON data
+- GeoJSON
 
-## Running locally
+## Running Locally
 
-This project needs to be run from a local web server
-for example:
+This project must be served via a local web server.
+
+Example:
+
 ```bash
 python3 -m http.server```
 
