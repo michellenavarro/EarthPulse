@@ -1,6 +1,13 @@
-// Cesium Ion token not required for this simple setup
+// ================================
+// 🌍 EarthPulse - Stable Cesium MVP
+// ================================
+
+// IMPORTANT: no Ion token needed for this MVP
 Cesium.Ion.defaultAccessToken = undefined;
 
+// -------------------------------
+// Viewer setup (stable config)
+// -------------------------------
 const viewer = new Cesium.Viewer("cesiumContainer", {
   imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
   baseLayerPicker: false,
@@ -11,62 +18,87 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
   geocoder: false,
 });
 
+// Camera starting position
 viewer.camera.setView({
-  destination: Cesium.Cartesian3.fromDegrees(0, 20, 20000000)
+  destination: Cesium.Cartesian3.fromDegrees(0, 20, 20000000),
 });
 
+// Atmosphere (nice visual touch)
 viewer.scene.skyAtmosphere.show = true;
 
+// UI panel
 const infoPanel = document.getElementById("infoPanel");
 
-// Color scale
-function getColor(co2) {
-  if (co2 < 2000) return Cesium.Color.GREEN.withAlpha(0.6);
-  if (co2 < 8000) return Cesium.Color.ORANGE.withAlpha(0.6);
-  return Cesium.Color.RED.withAlpha(0.6);
+// -------------------------------
+// Color function (optional placeholder)
+// -------------------------------
+function getColor(value) {
+  if (value < 2000) return Cesium.Color.GREEN.withAlpha(0.4);
+  if (value < 8000) return Cesium.Color.ORANGE.withAlpha(0.4);
+  return Cesium.Color.RED.withAlpha(0.5);
 }
 
-// Load GeoJSON
-Cesium.GeoJsonDataSource.load("./data/co2_emissions.geojson", {
-  clampToGround: true
-}).then((dataSource) => {
-  viewer.dataSources.add(dataSource);
+// -------------------------------
+// Country GeoJSON source
+// -------------------------------
+const url =
+  "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson";
 
-  const entities = dataSource.entities.values;
+// -------------------------------
+// Load countries safely
+// -------------------------------
+Cesium.GeoJsonDataSource.load(url, {
+  clampToGround: false, // important: avoids terrain/geometry edge issues
+})
+  .then((dataSource) => {
+    viewer.dataSources.add(dataSource);
 
-  for (let i = 0; i < entities.length; i++) {
-    const entity = entities[i];
-    const co2 = entity.properties.co2_total.getValue();
+    const entities = dataSource.entities.values;
 
-    entity.polygon.material = getColor(co2);
-    entity.polygon.outline = true;
-    entity.polygon.outlineColor = Cesium.Color.BLACK;
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
 
-    entity.polygon.extrudedHeight = co2 * 100; // visual emphasis
+      if (!entity.polygon) continue;
 
-    entity.description = `
-      <h3>${entity.properties.name.getValue()}</h3>
-      <p><b>Total CO₂:</b> ${co2}</p>
-      <p><b>Per Capita:</b> ${entity.properties.co2_per_capita.getValue()}</p>
-    `;
-  }
+      // ================================
+      // SAFE STYLING (NO OUTLINES)
+      // ================================
+      entity.polygon.material = Cesium.Color.DARKSLATEGRAY.withAlpha(0.35);
 
-  viewer.zoomTo(dataSource);
-});
+      entity.polygon.outline = false;
 
-// Click handler
+      // ensure correct classification behavior (optional but stable)
+      entity.polygon.classificationType =
+        Cesium.ClassificationType.TERRAIN;
+    }
+
+    // zoom to world
+    viewer.zoomTo(dataSource);
+  })
+  .catch((err) => {
+    console.error("GeoJSON load failed:", err);
+  });
+
+// -------------------------------
+// Click interaction (safe picking)
+// -------------------------------
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
 handler.setInputAction((movement) => {
   const picked = viewer.scene.pick(movement.position);
 
-  if (Cesium.defined(picked) && picked.id) {
+  if (Cesium.defined(picked) && picked.id && picked.id.properties) {
     const props = picked.id.properties;
 
+    const name =
+      props.NAME_EN?.getValue?.() ||
+      props.name?.getValue?.() ||
+      "Unknown Country";
+
     infoPanel.innerHTML = `
-      <b>${props.name.getValue()}</b><br/>
-      CO₂: ${props.co2_total.getValue()}<br/>
-      Per Capita: ${props.co2_per_capita.getValue()}
+      <b>${name}</b><br/>
+      CO₂: (not yet connected)<br/>
+      Status: geometry loaded ✔
     `;
   }
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
