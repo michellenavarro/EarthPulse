@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EarthPulse</title>
+
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.118/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.118/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div id="cesiumContainer"></div>
+
+  <div id="ui">
+    <h1>🌍 EarthPulse</h1>
+    <p>CO₂ emissions visualization</p>
+
+    <div id="legend">
+      <div><span class="box low"></span> Low</div>
+      <div><span class="box mid"></span> Medium</div>
+      <div><span class="box high"></span> High</div>
+    </div>
+
+    <div id="infoPanel">Click a country</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

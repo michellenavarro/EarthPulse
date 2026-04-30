@@ -1,0 +1,40 @@
+html, body, #cesiumContainer {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: black;
+}
+
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  font-family: sans-serif;
+  z-index: 10;
+  background: rgba(0,0,0,0.5);
+  padding: 12px;
+  border-radius: 10px;
+  width: 220px;
+}
+
+#legend {
+  margin-top: 10px;
+}
+
+.box {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+}
+
+.low { background: green; }
+.mid { background: orange; }
+.high { background: red; }
+
+#infoPanel {
+  margin-top: 10px;
+  font-size: 13px;
+}
