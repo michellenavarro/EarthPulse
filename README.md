@@ -19,4 +19,10 @@ It displays global CO₂ emissions data on an interactive globe.
 
 ## Running locally
 
-Just open `index.html` in a browser.
+This project needs to be run from a local web server
+for example:
+```bash
+python3 -m http.server```
+
+Then open:
+http://localhost:8000
