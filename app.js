@@ -1,8 +1,5 @@
 Cesium.Ion.defaultAccessToken = undefined;
 
-// ================================
-// 🌍 Viewer
-// ================================
 const viewer = new Cesium.Viewer("cesiumContainer", {
   imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
   baseLayerPicker: false,
@@ -21,16 +18,11 @@ viewer.scene.skyAtmosphere.show = true;
 
 const infoPanel = document.getElementById("infoPanel");
 
-// ================================
-// 🌍 DATA
-// ================================
+
 let co2ByISO = {};
 let nameToISO = {};
 let normalizedNameToISO = {};
 
-// ================================
-// 🧠 normalize helper (CRITICAL FIX)
-// ================================
 function normalize(name) {
   return (name || "")
     .toLowerCase()
@@ -40,12 +32,9 @@ function normalize(name) {
     .trim();
 }
 
-// ================================
-// 🌍 LOAD DATA
-// ================================
+// load data
 async function loadCO2() {
   co2ByISO = await fetch("./data/co2.json").then(r => r.json());
-  console.log("CO₂ loaded:", Object.keys(co2ByISO).length);
 }
 
 async function loadCountries() {
@@ -55,13 +44,9 @@ async function loadCountries() {
   for (const [name, iso] of Object.entries(nameToISO)) {
     normalizedNameToISO[normalize(name)] = iso;
   }
-
-  console.log("Countries loaded:", Object.keys(nameToISO).length);
 }
 
-// ================================
-// 🎨 Color scale (UNCHANGED)
-// ================================
+// color scale 
 function getColor(co2Obj) {
   const co2 = co2Obj?.co2;
 
@@ -75,15 +60,10 @@ function getColor(co2Obj) {
   return Cesium.Color.RED.withAlpha(0.55);
 }
 
-// ================================
-// 🌍 GeoJSON
-// ================================
+// geojson
 const GEOJSON_URL =
   "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson";
 
-// ================================
-// 🧠 Extract name (your original logic kept)
-// ================================
 function getCountryName(entity) {
   const p = entity.properties;
 
@@ -95,23 +75,18 @@ function getCountryName(entity) {
   );
 }
 
-// ================================
-// 🔗 resolve ISO (NEW FIXED LAYER)
-// ================================
 function resolveISO(name) {
   if (!name) return null;
 
   // try exact match first
   if (nameToISO[name]) return nameToISO[name];
 
-  // fallback normalized match (THIS FIXES EVERYTHING)
+  // fallback normalized match 
   const norm = normalize(name);
   return normalizedNameToISO[norm] || null;
 }
 
-// ================================
-// 🌍 Load world
-// ================================
+
 async function loadWorld() {
   await loadCO2();
   await loadCountries();
@@ -137,20 +112,11 @@ async function loadWorld() {
 
     entity.polygon.material = getColor(co2);
     entity.polygon.outline = false;
-
-    if (i < 5) {
-      console.log("DEBUG:", name, "→", iso, "→", co2);
-    }
   }
-
-  console.log("Matched countries:", matched);
 
   viewer.zoomTo(dataSource);
 }
 
-// ================================
-// 🖱 Click
-// ================================
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
 handler.setInputAction((movement) => {
@@ -169,7 +135,4 @@ handler.setInputAction((movement) => {
   `;
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-// ================================
-// 🚀 Boot
-// ================================
 loadWorld().catch(console.error);
