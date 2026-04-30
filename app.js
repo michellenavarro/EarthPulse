@@ -2,7 +2,10 @@
 Cesium.Ion.defaultAccessToken = undefined;
 
 const viewer = new Cesium.Viewer("cesiumContainer", {
-  terrainProvider: Cesium.createWorldTerrain(),
+  imageryProvider: new Cesium.OpenStreetMapImageryProvider({
+    url: "https://a.tile.openstreetmap.org/"
+  }),
+  terrainProvider: new Cesium.EllipsoidTerrainProvider(),
   animation: false,
   timeline: false,
   fullscreenButton: false,
