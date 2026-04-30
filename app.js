@@ -2,15 +2,20 @@
 Cesium.Ion.defaultAccessToken = undefined;
 
 const viewer = new Cesium.Viewer("cesiumContainer", {
-  imageryProvider: new Cesium.OpenStreetMapImageryProvider({
-    url: "https://a.tile.openstreetmap.org/"
-  }),
+  imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
+  baseLayerPicker: false,
   terrainProvider: new Cesium.EllipsoidTerrainProvider(),
   animation: false,
   timeline: false,
   fullscreenButton: false,
   geocoder: false,
 });
+
+viewer.camera.setView({
+  destination: Cesium.Cartesian3.fromDegrees(0, 20, 20000000)
+});
+
+viewer.scene.skyAtmosphere.show = true;
 
 const infoPanel = document.getElementById("infoPanel");
 
